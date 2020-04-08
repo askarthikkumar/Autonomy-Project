@@ -66,10 +66,9 @@ class NoisyObjectPoseSensor:
 if __name__ == "__main__":
     action_mode = ActionMode(ArmActionMode.DELTA_EE_POSE) # See rlbench/action_modes.py for other action modes
     env = Environment(action_mode, '', ObservationConfig(), False)
-    task = env.get_task(StackBlocks) # available tasks: EmptyContainer, PlayJenga, PutGroceriesInCupboard, SetTheTable
+    task = env.get_task(PutGroceriesInCupboard) # available tasks: EmptyContainer, PlayJenga, PutGroceriesInCupboard, SetTheTable
     agent = RandomAgent()
     obj_pose_sensor = NoisyObjectPoseSensor(env)
-   
     descriptions, obs = task.reset()
     print(descriptions)
     while True:

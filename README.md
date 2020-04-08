@@ -17,4 +17,4 @@ This script contains example code on how to control the robot, get observations,
 ## Useful Files
 The following files may be useful to reference from the In the `rlbench` folder in the `RLBench` repo:
 * `rlbench/action_modes.py` - Different action modes to control the robot
-* `rlbench/backend/observation.py` - All fields available in the observation object
+* `rlbench/backend/observation.py` - All fields available in the observation object# Autonomy-Project

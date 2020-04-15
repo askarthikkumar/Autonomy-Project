@@ -1,6 +1,6 @@
 import numpy as np
 import scipy as sp
-from quaternion import from_rotation_matrix, quaternion
+from quaternion import from_rotation_matrix, quaternion, from_euler_angles
 
 from rlbench.environment import Environment
 from rlbench.action_modes import ArmActionMode, ActionMode

@@ -250,7 +250,7 @@ class StateMachine(object):
         '''
         move_objs = machine.movable_objects
     
-        for shape in move_objs:
+        for i, shape in enumerate(move_objs):
             
             cond = False
             retry_count = 0
@@ -281,6 +281,7 @@ class StateMachine(object):
             # move above small container
             objs_poses=machine.sensor.get_poses()
             pose = objs_poses[target_bin]
+            pose[0] += (i*0.04 - 0.04)
             path=machine.move_to(pose,0.05,True)
             machine.execute(path)
 

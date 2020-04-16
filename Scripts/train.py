@@ -79,7 +79,7 @@ class CustomEnv(gym.Env):
         contains two poses, and length,width and height of object bb
         '''
         objs = self.machine.get_objects(True)
-        gripper_pose = list(self.machine.env._robot.gripper.get_pose())
+        gripper_pose = list(self.machine.env._scene.get_observation().gripper_pose)
         obj_pose = list(objs[OBJECT].get_pose())
         obj_bb = objs[OBJECT].get_bounding_box()
         x_diff = obj_bb[0]-obj_bb[3]
@@ -92,8 +92,13 @@ class CustomEnv(gym.Env):
         self.machine.task.reset()
         objs = self.machine.get_objects(True)
         pose = objs[OBJECT].get_pose()
-        path = self.machine.move_to(pose,pad=0.2)
-        self.machine.execute(path)
+        while True:
+            try:
+                self.machine.go_to(pose, pad=0.2)
+                break
+            except:
+                self.machine.task.reset()
+                print("Path not found. Retrying after task reset")
         obs = self.make_obs()
         return obs
 
@@ -107,7 +112,7 @@ if __name__ == "__main__":
     machine = StateMachine()
     machine.initialize()
     env = CustomEnv(machine)
-    model = DQN(MlpPolicy, env, verbose=1, learning_starts=64, batch_size=64, 
-                exploration_fraction=0.3, target_network_update_freq=32, tensorboard_log=dir_path+'/Logs/')
-    model.learn(total_timesteps=1000)
+    model = DQN(MlpPolicy, env, verbose=1, learning_starts=16, batch_size=16, \
+                exploration_fraction=0.3, target_network_update_freq=16, tensorboard_log=dir_path+'/Logs/')
+    model.learn(total_timesteps=1000, log_interval=1000000)
     model.save(dir_path+"/Models/Grasp_Model")

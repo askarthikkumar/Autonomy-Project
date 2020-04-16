@@ -4,7 +4,7 @@
 
 import numpy as np
 import scipy as sp
-
+import copy
 from scipy.spatial.transform import Rotation
 from quaternion import from_rotation_matrix, quaternion, from_euler_angles
 import quaternion as qn # uses (w,x,y,z)
@@ -102,7 +102,7 @@ class StateMachine(object):
         obs_config.set_all(True)
         obs_config.left_shoulder_camera.rgb = True
         obs_config.right_shoulder_camera.rgb = True
-        action_mode = ActionMode(ArmActionMode.DELTA_EE_POSE)
+        action_mode = ActionMode(ArmActionMode.ABS_EE_POSE_PLAN)
         self.env = Environment(
             action_mode, DATASET, obs_config, False)
         self.sensor = NoisyObjectPoseSensor(self.env)
@@ -130,7 +130,8 @@ class StateMachine(object):
                 objs_dict[name] = item
             return objs_dict
         else:
-            objs = self.env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
+            objs = self.env._scene._active_task.get_base().\
+                    get_objects_in_tree(exclude_base=True, first_generation_only=False)
             objs_dict = {}
             for obj in objs:
                 name = obj.get_name()
@@ -145,7 +146,8 @@ class StateMachine(object):
         obs = self.env._scene.get_observation()
         init_pose=obs.gripper_pose
         target_pose[2]+=pad
-        path=self.env._robot.arm.get_path(np.array(target_pose[0:3]),quaternion=quat, trials=1000,ignore_collisions=True, algorithm=Algos.RRTConnect)
+        path=self.env._robot.arm.get_path(np.array(target_pose[0:3]),quaternion=quat, trials=1000,
+                                                ignore_collisions=True, algorithm=Algos.RRTConnect)
         # TODO catch errors and deal with situations when path not found
         return path
     
@@ -179,9 +181,23 @@ class StateMachine(object):
             self.env._scene.step()
         return done
     
+    def go_to(self, pose, pad = 0.05, quat=np.array([0,1,0,0]), gripper_close=False):
+        pose_cp = copy.copy(pose)
+        pose_cp[2]+=pad
+        pose_cp[3:]=quat
+        wp = pose_cp.tolist()+[1]
+        if gripper_close:
+            wp = pose_cp.tolist()+[0]
+        try:
+            self.task.step(wp)
+        except:
+            print("Retrying with normal path planner")
+            path=self.move_to(pose,pad,True,quat)
+            self.execute(path)
+        return
+
     def reset(self):
         self.task.reset()
-    
     
     def is_within(self,obj1,obj2):
         #whether obj2 is within obj1
@@ -220,7 +236,6 @@ class StateMachine(object):
         for name in self.objs:
             if "Shape" in name:
                 objects.append(name)
-
         print(objects)
         return objects
     
@@ -263,39 +278,28 @@ class StateMachine(object):
                 theta = 2*np.pi*retry_count/self.max_retry
                 quat = self.get_grasp_pose(theta)
                 # go back to home position
-                path=machine.move_to(start_bin_pose,0,True)
-                machine.execute(path)
-
+                machine.go_to(start_bin_pose,0,gripper_close=False)
                 # move above object
                 objs_poses = machine.sensor.get_poses()
                 # pose=objs[shape].get_pose()
                 pose=objs_poses[shape]
-                path=machine.move_to(pose,0, quat=quat)
-                machine.execute(path)
-
+                machine.go_to(pose,0, quat=quat,gripper_close=False)
                 # grasp the object
                 cond = machine.grasp(self.objs[shape])
-                
                 if not cond:
                     retry_count += 1
                     print("retry count: ", retry_count)
-
             # move to home position
-            path=machine.move_to(start_bin_pose,0,True)
-            machine.execute(path)
+            machine.go_to(start_bin_pose,0,gripper_close=True)
             print("Gripper joint forces",self.env._robot.gripper.get_joint_forces())
             # move above small container
             objs_poses=machine.sensor.get_poses()
             pose = objs_poses[target_bin]
             pose[0] += (i*0.04 - 0.04)
-            path=machine.move_to(pose,0.05,True)
-            machine.execute(path)
-
+            machine.go_to(pose,0.05,gripper_close=True)
             # release the object
             machine.release(self.objs[shape])
-        
-        path=machine.move_to(machine.home,0,True)
-        machine.execute(path)
+        machine.go_to(machine.home,0,gripper_close=False)
 
 
 if __name__ == "__main__":    

@@ -98,6 +98,8 @@ class CustomEnv(gym.Env):
                 break
             except:
                 self.machine.task.reset()
+                objs = self.machine.get_objects(True)
+                pose = objs[OBJECT].get_pose()
                 print("Path not found. Retrying after task reset")
         obs = self.make_obs()
         return obs

@@ -114,7 +114,7 @@ if __name__ == "__main__":
     machine = StateMachine()
     machine.initialize()
     env = CustomEnv(machine)
-    model = DQN(MlpPolicy, env, verbose=1, learning_starts=16, batch_size=16, \
-                exploration_fraction=0.3, target_network_update_freq=16, tensorboard_log=dir_path+'/Logs/')
+    model = DQN(MlpPolicy, env, verbose=1, learning_starts=32, batch_size=32, \
+                exploration_fraction=0.3, target_network_update_freq=32, tensorboard_log=dir_path+'/Logs/')
     model.learn(total_timesteps=1000, log_interval=1000000)
     model.save(dir_path+"/Models/Grasp_Model")

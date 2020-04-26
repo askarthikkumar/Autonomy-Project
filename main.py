@@ -6,7 +6,7 @@ from rlbench.action_modes import ArmActionMode, ActionMode
 from rlbench.observation_config import ObservationConfig
 from rlbench.tasks import *
 
-from src.reset_agent import ResetAgent
+from src.retry_reset_agent import RetryResetAgent
 from src.simple_fwd_agent import SimpleFwdAgent
 
 # Setup Environment:
@@ -27,6 +27,6 @@ fwd_agent = SimpleFwdAgent(env, task)
 fwd_agent.sort_objects()
 
 # Reset the environment
-# reset_agent = ResetAgent(env, task)
-# reset_agent.reset_env()
+reset_agent = RetryResetAgent(env, task)
+reset_agent.reset_env()
 

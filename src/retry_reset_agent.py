@@ -2,12 +2,11 @@
 # coding: utf-8
 
 import numpy as np
-import traceback
 
 from src.rlbench_example import *
-from src.base_agent import BaseAgent
+from src.reset_agent import ResetAgent
 
-class SimpleFwdAgent(BaseAgent):
+class RetryResetAgent(ResetAgent):
     def __init__(self, env=None, task=None):
         super().__init__(env=env, task=task)
         
@@ -15,8 +14,8 @@ class SimpleFwdAgent(BaseAgent):
 
         self.movable_objects = [shape for shape in self.objs_dict if 'Shape' in shape]
         
-        self.start_bins = ['large_container']
-        self.target_bins = ['small_container0']
+        self.start_bins = ['small_container0']
+        self.target_bins = ['large_container']
         
         self.max_retry = 10
         self.pad_z = 0.3
@@ -26,7 +25,7 @@ class SimpleFwdAgent(BaseAgent):
     def get_obj_pose(self, obj_name):
         return self.sensor.get_poses()[obj_name]
     
-    def get_fwd_policy_angles(self, retry_count):
+    def get_retry_policy_angles(self, retry_count):
         if retry_count == 0:
             angle_x = 0
             angle_y = np.pi
@@ -50,7 +49,7 @@ class SimpleFwdAgent(BaseAgent):
         
         return np.array([angle_x, angle_y, angle_z])
 
-    def sort_objects(self):
+    def reset_env(self):
         
         target_bin = self.target_bins[0]
         start_bin = self.start_bins[0]
@@ -76,10 +75,10 @@ class SimpleFwdAgent(BaseAgent):
                 # move above object
                 pose = self.get_obj_pose(shape)
 
-                angles = self.get_fwd_policy_angles(retry_count)
-                
+                angles = self.get_retry_policy_angles(retry_count)
+
                 self.go_to_pose(pose, orientation_euler=angles)
-                
+
                 # grasp the object
                 is_picked = self.grasp(self.objs_dict[shape])
                 

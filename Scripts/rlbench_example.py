@@ -1,6 +1,6 @@
 import numpy as np
 import scipy as sp
-from quaternion import from_rotation_matrix, quaternion, from_euler_angles
+from quaternion import from_rotation_matrix, quaternion
 
 from rlbench.environment import Environment
 from rlbench.action_modes import ArmActionMode, ActionMode
@@ -66,9 +66,10 @@ class NoisyObjectPoseSensor:
 if __name__ == "__main__":
     action_mode = ActionMode(ArmActionMode.DELTA_EE_POSE) # See rlbench/action_modes.py for other action modes
     env = Environment(action_mode, '', ObservationConfig(), False)
-    task = env.get_task(PutGroceriesInCupboard) # available tasks: EmptyContainer, PlayJenga, PutGroceriesInCupboard, SetTheTable
+    task = env.get_task(EmptyContainer) # available tasks: EmptyContainer, PlayJenga, PutGroceriesInCupboard, SetTheTable
     agent = RandomAgent()
     obj_pose_sensor = NoisyObjectPoseSensor(env)
+   
     descriptions, obs = task.reset()
     print(descriptions)
     while True:
@@ -86,7 +87,7 @@ if __name__ == "__main__":
         action = agent.act(obs)
         obs, reward, terminate = task.step(action)
 
-        if terminate:
-            break
+        # if terminate:
+        #     break
 
     env.shutdown()

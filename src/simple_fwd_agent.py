@@ -5,9 +5,9 @@ import numpy as np
 import traceback
 
 from src.rlbench_example import *
-from src.base_agent import BaseAgent
+from src.fwd_agent import FWDAgent
 
-class SimpleFwdAgent(BaseAgent):
+class SimpleFwdAgent(FWDAgent):
     def __init__(self, env=None, task=None):
         super().__init__(env=env, task=task)
         
@@ -50,7 +50,7 @@ class SimpleFwdAgent(BaseAgent):
         
         return np.array([angle_x, angle_y, angle_z])
 
-    def sort_objects(self):
+    def empty_the_container(self):
         
         target_bin = self.target_bins[0]
         start_bin = self.start_bins[0]

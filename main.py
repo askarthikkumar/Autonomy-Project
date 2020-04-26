@@ -8,6 +8,7 @@ from rlbench.tasks import *
 
 from src.retry_reset_agent import RetryResetAgent
 from src.simple_fwd_agent import SimpleFwdAgent
+from src.container_reset_agent import ContainerResetAgent
 
 # Setup Environment:
 obs_config = ObservationConfig()
@@ -24,9 +25,15 @@ task.reset()
 
 # Execute FWD policy
 fwd_agent = SimpleFwdAgent(env, task)
-fwd_agent.sort_objects()
+fwd_agent.empty_the_container()
 
 # Reset the environment
-reset_agent = RetryResetAgent(env, task)
-reset_agent.reset_env()
+
+# Reset Agent 1
+# reset_agent = RetryResetAgent(env, task)
+# reset_agent.reset_env()
+
+# Reset Agent 2
+container_reset_agent = ContainerResetAgent(env, task)
+container_reset_agent.reset_env()
 

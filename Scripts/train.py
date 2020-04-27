@@ -145,7 +145,30 @@ class CustomEnv(gym.Env):
     def close (self):
         pass
 
-if __name__ == "__main__":
+def run_test():
+    machine = StateMachine()
+    machine.initialize(headless=True)
+    camera = Camera(machine)
+    env = CustomEnv(machine, camera, state="vision")
+    path = os.path.join(dir_path,"../Models/Grasp_Model")
+    model = DQN.load(path)
+    obs = env.reset()
+    count = 0
+    success = 0
+    while count < 100:
+        done = False
+        print("Count ", count, "Success ", success)
+        while not done:
+            action, _ = model.predict(obs)
+            print(action)
+            obs, reward, done, info = env.step(action)
+            print("Reward",reward)
+        count += 1
+        if info[0]["success"]:
+            success += 1
+    print("Success Rate ", success / count, success, count)
+
+def train():
     machine = StateMachine()
     machine.initialize(headless=True)
     camera = Camera(machine)
@@ -153,4 +176,10 @@ if __name__ == "__main__":
     model = DQN(CnnPolicy, env, verbose=1, learning_starts=32, batch_size=32, \
                 exploration_fraction=0.3, target_network_update_freq=32, tensorboard_log=dir_path+'/Logs/')
     model.learn(total_timesteps=1000, log_interval=1000000)
-    model.save("Grasp_Model")
+    model.save("Grasp_Model_1")
+
+if __name__ == "__main__":
+    # to train
+    train()
+    # to test
+    test()

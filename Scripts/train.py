@@ -11,14 +11,21 @@ from gym import spaces
 import tensorflow as tf
 import tensorflow.contrib as tf_contrib
 import tensorflow.contrib.layers as tf_layers
-from stable_baselines.deepq.policies import MlpPolicy
+from stable_baselines.deepq.policies import MlpPolicy, CnnPolicy
 from stable_baselines.deepq.policies import DQNPolicy
 from stable_baselines import DQN,DDPG
 # RLBench Packages
 from empty_container import *
+from camera import Camera
+from pyrep.const import RenderMode
+from pyrep.objects.dummy import Dummy
+from pyrep.objects.vision_sensor import VisionSensor
+# other packages
+from quaternion import quaternion, as_rotation_vector
+import matplotlib.pyplot as plt
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-OBJECT = "Shape1"
+OBJECT = "Shape"
 N_ACTIONS = 8
 
 # make custom environment class to only read values. It should not directly change values in the other thread.
@@ -27,14 +34,24 @@ class CustomEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, machine):
+    def __init__(self, machine, camera, state="state"):
         super(CustomEnv, self).__init__()
         # Define action and observation space
         # They must be gym.spaces objects
         self.machine = machine
+        self.camera = camera
         self.action_space = spaces.Discrete(N_ACTIONS)
-        self.observation_space = spaces.Box(low = -10, high=10, shape = (1,17))
+        if state=="state":
+            self.observation_space = spaces.Box(low = -10, high=10, shape = (1,15))
+        elif state=="vision":
+            self.observation_space = spaces.Box(low = 0, high=1, shape = (128,128,3))
         self.min_force = 1
+        cam_placeholder = Dummy('cam_cinematic_placeholder')
+        self._gym_cam = VisionSensor.create([640, 360])
+        self._gym_cam.set_pose(cam_placeholder.get_pose())
+        self._gym_cam.set_render_mode(RenderMode.OPENGL3_WINDOWED)
+        # self._gym_cam.set_render_mode(RenderMode.OPENGL3)
+        self.state_rep = state
 
     def step(self, action):
         theta = (2*np.pi)*(action/N_ACTIONS)
@@ -78,23 +95,41 @@ class CustomEnv(gym.Env):
         State vector of length 17
         contains two poses, and length,width and height of object bb
         '''
-        objs = self.machine.get_objects(True)
-        gripper_pose = list(self.machine.env._scene.get_observation().gripper_pose)
-        obj_pose = list(objs[OBJECT].get_pose())
-        obj_bb = objs[OBJECT].get_bounding_box()
-        x_diff = obj_bb[0]-obj_bb[3]
-        y_diff = obj_bb[1]-obj_bb[4]
-        z_diff = obj_bb[2]-obj_bb[5]
-        state = np.array(gripper_pose+obj_pose+[x_diff,y_diff,z_diff]).reshape(1,-1)
+        state = None
+        if self.state_rep=="state":
+            objs = self.machine.get_objects(True)
+            gripper_pose = list(self.machine.env._scene.get_observation().gripper_pose)
+            gripper_quat = gripper_pose[3:]
+            gripper_quat[0], gripper_quat[-1] =gripper_quat[-1], gripper_quat[0]
+            quat = quaternion(*gripper_quat)
+            g_vec = list(as_rotation_vector(quat))
+            obj_pose = list(objs[OBJECT].get_pose())
+            obj_quat = obj_pose[3:]
+            obj_quat[0], obj_quat[-1] = obj_quat[-1], obj_quat[0]
+            quat = quaternion(*obj_quat)
+            r_vec = list(as_rotation_vector(quat))
+            obj_bb = objs[OBJECT].get_bounding_box()
+            x_diff = obj_bb[0]-obj_bb[3]
+            y_diff = obj_bb[1]-obj_bb[4]
+            z_diff = obj_bb[2]-obj_bb[5]
+            state = np.array(gripper_pose[:3]+g_vec+ \
+                                obj_pose[:3]+r_vec+[x_diff,y_diff,z_diff]).reshape(1,-1)
+        elif self.state_rep=="vision":
+            obs = self.machine.env._scene.get_observation()
+            state = obs.wrist_rgb
+            # plt.imsave("image.png",state)
         return state
 
     def reset(self):
-        self.machine.task.reset()
+        _,obs = self.machine.task.reset()
+        # left_shoulder = obs.left_shoulder_rgb
+        # right_shoulder = obs.right_shoulder_rgb
         objs = self.machine.get_objects(True)
         pose = objs[OBJECT].get_pose()
         while True:
             try:
                 self.machine.go_to(pose, pad=0.2)
+                print("here")
                 break
             except:
                 self.machine.task.reset()
@@ -112,9 +147,10 @@ class CustomEnv(gym.Env):
 
 if __name__ == "__main__":
     machine = StateMachine()
-    machine.initialize()
-    env = CustomEnv(machine)
-    model = DQN(MlpPolicy, env, verbose=1, learning_starts=32, batch_size=32, \
+    machine.initialize(headless=True)
+    camera = Camera(machine)
+    env = CustomEnv(machine, camera, state="vision")
+    model = DQN(CnnPolicy, env, verbose=1, learning_starts=32, batch_size=32, \
                 exploration_fraction=0.3, target_network_update_freq=32, tensorboard_log=dir_path+'/Logs/')
     model.learn(total_timesteps=1000, log_interval=1000000)
-    model.save(dir_path+"/Models/Grasp_Model")
+    model.save("Grasp_Model")

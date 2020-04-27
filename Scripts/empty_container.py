@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 # coding: utf-8
 
@@ -96,7 +97,7 @@ class StateMachine(object):
         self.sensor=None
         self.objs_dict=None
         
-    def initialize(self):
+    def initialize(self,headless=False):
         DATASET = ''
         obs_config = ObservationConfig()
         obs_config.set_all(True)
@@ -104,7 +105,7 @@ class StateMachine(object):
         obs_config.right_shoulder_camera.rgb = True
         action_mode = ActionMode(ArmActionMode.ABS_EE_POSE_PLAN)
         self.env = Environment(
-            action_mode, DATASET, obs_config, False)
+            action_mode, DATASET, obs_config, headless=headless)
         self.sensor = NoisyObjectPoseSensor(self.env)
         self.env.launch()
         self.task = self.env.get_task(EmptyContainer)
@@ -177,7 +178,7 @@ class StateMachine(object):
         path.set_to_start()
         while not done:
             done = path.step()
-            a = path.visualize()
+            # a = path.visualize()
             self.env._scene.step()
         return done
     
@@ -308,4 +309,3 @@ if __name__ == "__main__":
     print("HERE")
     machine.move_objects_to_target(machine.target_bins, machine.start_bins)
     machine.move_objects_to_target(machine.start_bins, machine.target_bins)
-

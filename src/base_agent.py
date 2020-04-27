@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import numpy as np
+import math 
 
 from scipy.spatial.transform import Rotation as R
 from quaternion import from_rotation_matrix, quaternion, from_euler_angles
@@ -43,23 +44,29 @@ class BaseAgent(object):
     def get_path(self, pose, orientation_euler=[0, np.pi, 0], ignore_collisions=True):
         # TODO catch errors and deal with situations when path not found
         path = self.env._robot.arm.get_path(pose[0:3], euler=orientation_euler, 
-                trials=1000, ignore_collisions=True, algorithm=Algos.RRTConnect)
+                trials=1000, ignore_collisions=ignore_collisions, algorithm=Algos.RRTConnect)
 
         return path
-    
-    def grasp(self, obj):
+    def open_gripper(self):
         # open the grippers
         is_open = False
         while not is_open:
             is_open = self.env._robot.gripper.actuate(1,0.1)
             self.env._scene.step()
-        
+        return is_open
+
+    def close_gripper(self):
         is_closed = False
         # now close
         while not is_closed:
             is_closed = self.env._robot.gripper.actuate(0,0.1)
             self.env._scene.step()
-        
+        return is_closed
+
+    def grasp(self, obj):
+        self.open_gripper()
+        self.close_gripper()
+
         grasped = self.env._robot.gripper.grasp(obj)
         return grasped
     
@@ -78,15 +85,15 @@ class BaseAgent(object):
             path.set_to_start()
             while not done:
                 done = path.step()
-                path.visualize()
+                # path.visualize()
                 self.env._scene.step()
         except Exception as e:
             traceback.print_exc()
             done = False
         return done
     
-    def go_to_pose(self, pose, orientation_euler=[0, np.pi, 0]):
-        path = self.get_path(pose, orientation_euler=orientation_euler)
+    def go_to_pose(self, pose, orientation_euler=[0, np.pi, 0], ignore_collisions=True):
+        path = self.get_path(pose, orientation_euler=orientation_euler, ignore_collisions=ignore_collisions)
         reached = self.execute_path(path)
         return reached
     
@@ -105,3 +112,13 @@ class BaseAgent(object):
             self.execute(path)
         return
                 
+    def is_contained(self, shape_name, container_name):
+        container_pose = self.objs_dict[container_name].get_pose()
+        container_bb = self.objs_dict[container_name].get_bounding_box()
+        shape_pose = self.objs_dict[shape_name].get_pose()
+        diff = np.fabs(shape_pose[:3] - container_pose[:3])
+        boundry = np.fabs(np.array([container_bb[1], container_bb[3], container_bb[5]]))
+        if np.all(diff < boundry):
+            return True
+        else:
+            return False

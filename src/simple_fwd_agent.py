@@ -70,11 +70,11 @@ class SimpleFwdAgent(FWDAgent):
 
             while not is_picked and retry_count < self.max_retry:
             
-                # go back to home position
-                self.go_to_pose(start_bin_pose)
-                
-                # move above object
                 pose = self.get_obj_pose(shape)
+                pose[2] += self.pad_z
+
+                self.go_to_pose(pose)
+                pose[2] -= self.pad_z
 
                 angles = self.get_fwd_policy_angles(retry_count)
                 
@@ -86,16 +86,24 @@ class SimpleFwdAgent(FWDAgent):
                 if not is_picked:
                     retry_count += 1
                     print("Retry count: ", retry_count)
+                    self.open_gripper()
             
-            # move to home position
             self.go_to_pose(start_bin_pose)
             
-            # move above small container
+
             pose = self.get_obj_pose(target_bin)
+            
+            pose[2] += self.pad_z
             self.go_to_pose(pose)
             
+            pose[2] -= self.pad_z
+            self.go_to_pose(pose)
+
             # release the object
             self.release(self.objs_dict[shape])
-        
+
+            pose[2] += self.pad_z
+            self.go_to_pose(pose)
+
         self.go_to_pose(self.home_pose)
 

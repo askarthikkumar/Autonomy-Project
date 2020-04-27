@@ -10,10 +10,8 @@ import time
 from gym import spaces
 import tensorflow as tf
 import tensorflow.contrib as tf_contrib
-import tensorflow.contrib.layers as tf_layers
-from stable_baselines.deepq.policies import MlpPolicy, CnnPolicy
-from stable_baselines.deepq.policies import DQNPolicy
-from stable_baselines import DQN,DDPG
+from stable_baselines.sac.policies import MlpPolicy,CnnPolicy
+from stable_baselines import SAC
 # RLBench Packages
 from empty_container import *
 from camera import Camera
@@ -26,7 +24,7 @@ import matplotlib.pyplot as plt
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 OBJECT = "Shape"
-N_ACTIONS = 8
+# N_ACTIONS = 8
 
 # make custom environment class to only read values. It should not directly change values in the other thread.
 class CustomEnv(gym.Env):
@@ -40,7 +38,8 @@ class CustomEnv(gym.Env):
         # They must be gym.spaces objects
         self.machine = machine
         self.camera = camera
-        self.action_space = spaces.Discrete(N_ACTIONS)
+        self.action_space = spaces.Box(
+            low=np.array([-np.pi,-np.pi/4,-np.pi/4]), high=np.array([np.pi,np.pi/4,np.pi/4]))
         if state=="state":
             self.observation_space = spaces.Box(low = -10, high=10, shape = (1,15))
         elif state=="vision":
@@ -54,8 +53,8 @@ class CustomEnv(gym.Env):
         self.state_rep = state
 
     def step(self, action):
-        theta = (2*np.pi)*(action/N_ACTIONS)
-        quat = self.machine.get_grasp_pose(theta)
+        print(action)
+        quat = self.machine.get_full_grasp_pose(action)
         objs = self.machine.get_objects(True)
         pose = objs[OBJECT].get_pose()
         print("ACTION TAKEN", action)
@@ -73,7 +72,7 @@ class CustomEnv(gym.Env):
             return obs,reward,done,info
         except:
             print("COULD NOT FIND PATH")
-            reward = 0
+            reward = -1
             obs=self.make_obs()
             info = {}
             info["success"] = False
@@ -175,13 +174,13 @@ def train():
     machine.initialize(headless=True)
     camera = Camera(machine)
     env = CustomEnv(machine, camera, state="vision")
-    model = DQN(CnnPolicy, env, verbose=1, learning_starts=32, batch_size=32, \
-                exploration_fraction=0.3, target_network_update_freq=32, tensorboard_log=dir_path+'/Logs/')
-    model.learn(total_timesteps=1000, log_interval=1000000)
-    model.save("Grasp_Model_1")
+    model = SAC(CnnPolicy, env, verbose=1, learning_starts=32, batch_size=32, \
+                target_update_interval=32, tensorboard_log=dir_path+'/Logs/')
+    model.learn(total_timesteps=2000, log_interval=1000000)
+    model.save("Grasp_Model_Full_Pose")
 
 if __name__ == "__main__":
     # to train
-    # train()
+    train()
     # to test
-    test()
+    # test()

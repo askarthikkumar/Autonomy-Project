@@ -251,6 +251,25 @@ class StateMachine(object):
         rot_qt = [rot_arr[1], rot_arr[2], rot_arr[3], rot_arr[0]]
         return rot_qt
         
+    def get_full_grasp_pose(self, thetas):
+        thetax = thetas[0]
+        cos = np.cos(thetax/2)
+        sin = np.sin(thetax/2)
+        qx = quaternion(cos,sin,0,0)
+        thetay = thetas[1]
+        cos = np.cos(thetay/2)
+        sin = np.sin(thetay/2)
+        qy = quaternion(cos,0,sin,0)
+        thetaz = thetas[2]
+        cos = np.cos(thetaz/2)
+        sin = np.sin(thetaz/2)
+        qz = quaternion(cos,0,0,sin)
+        q_init = quaternion(0,1,0,0)
+        r = q_init*qz*qx*qy
+        r_arr = qn.as_float_array(r)
+        quat_vec = np.array([r_arr[1],r_arr[2],r_arr[3],r_arr[0]])
+        return quat_vec
+
     def move_objects_to_target(self, target_bins, start_bins):
         
         target_bin = target_bins[0]
